@@ -11,7 +11,17 @@ from flask import Flask, jsonify, request
 app = Flask(__name__)
 
 # Esto activa el modo debug, muestra errores más detallados cuando estoy programando
-app.config["DEBUG"] = True
+app.config["DEBUG"] = False
+
+#app.config["DEBUG"] = True
+
+from fake_model import FakeApartmentPriceModel
+import pickle
+
+with open("model.pkl", "rb") as f:
+    model = pickle.load(f)
+
+
 
 
 # Cargamos el "modelo" al iniciar la aplicación
