@@ -20,8 +20,6 @@ app.config["DEBUG"] = False
 # Cargamos el "modelo" al iniciar la aplicación
 # Esto hace que el modelo se lea una sola vez al arrancar la API
 # y no en cada petición
-
-
 model = joblib.load("model/model.pkl")
 
 
@@ -184,8 +182,6 @@ def build_feature_row(data):
         row[room_type_col] = 1
 
     return pd.DataFrame([row], columns=FEATURE_COLUMNS)
-
-
 
 
 
