@@ -143,49 +143,6 @@ def predict():
 
 
 
-# Ruta que recibe datos en el body en formato JSON por parte del 'cliente'
-# Con POST
-@app.route("/predict", methods=["POST"])
-def predict():
-    try:
-        # request.get_json() intenta leer el cuerpo de la petición como JSON
-        # Para que funcione bien, el cliente debe enviar:
-        # Content-Type: application/json
-        data = request.get_json()
-
-        # Extraemos cada valor del JSON recibido
-        neighbourhood = data["neighbourhood"]
-        room_type = data["room_type"]
-
-        # Convertimos a float las variables numéricas
-        minimum_nights = float(data["minimum_nights"])
-        number_of_reviews = float(data["number_of_reviews"])
-        availability_365 = float(data["availability_365"])
-        number_of_reviews_ltm = float(data["number_of_reviews_ltm"])
-
-        # Llamamos al modelo para obtener la predicción
-        prediction = model.predict_one(
-            neighbourhood=neighbourhood,
-            room_type=room_type,
-            minimum_nights=minimum_nights,
-            number_of_reviews=number_of_reviews,
-            availability_365=availability_365,
-            number_of_reviews_ltm=number_of_reviews_ltm
-        )
-
-        # Devolvemos el precio predicho y los datos recibidos
-        return jsonify({
-            "predicted_price": prediction,
-            "input": data
-        })
-
-    except Exception as e:
-        # Si algo falla, devolvemos el error en JSON
-        return jsonify({
-            "error": str(e)
-        }), 400
-
-
 # Manejador de error 404
 # Se activa cuando el usuario entra en una ruta que no existe
 @app.errorhandler(404)
