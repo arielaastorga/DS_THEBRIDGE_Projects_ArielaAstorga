@@ -27,58 +27,85 @@ model = joblib.load("model/model.pkl")
 
 
 # Variables de entrada del modelo
+# Esto debo hacerlo porque el modelo fue entrenado con columnas one_hot encodder
 
-MODEL_COLUMNS = [
+FEATURE_COLUMNS = [
+    "accommodates",
+    "bathrooms",
+    "bedrooms",
+    "beds",
     "minimum_nights",
     "number_of_reviews",
+    "review_scores_rating",
     "availability_365",
-    "neighbourhood_Acacias",
-    "neighbourhood_Almagro",
-    "neighbourhood_Almenara",
-    "neighbourhood_Arapiles",
-    "neighbourhood_Argüelles",
-    "neighbourhood_Bellas Vistas",
-    "neighbourhood_Berruguete",
-    "neighbourhood_Castillejos",
-    "neighbourhood_Cortes",
-    "neighbourhood_Cuatro Caminos",
-    "neighbourhood_Embajadores",
-    "neighbourhood_Gaztambide",
-    "neighbourhood_Goya",
-    "neighbourhood_Guindalera",
-    "neighbourhood_Ibiza",
-    "neighbourhood_Justicia",
-    "neighbourhood_Lista",
-    "neighbourhood_Numancia",
-    "neighbourhood_Other",
-    "neighbourhood_Pacífico",
-    "neighbourhood_Palacio",
-    "neighbourhood_Palos de Moguer",
-    "neighbourhood_Prosperidad",
-    "neighbourhood_Pueblo Nuevo",
-    "neighbourhood_Puerta del Angel",
-    "neighbourhood_Recoletos",
-    "neighbourhood_Rios Rosas",
-    "neighbourhood_San Diego",
-    "neighbourhood_San Isidro",
-    "neighbourhood_Sol",
-    "neighbourhood_Trafalgar",
-    "neighbourhood_Universidad",
-    "neighbourhood_Valdeacederas",
-    "neighbourhood_Ventas",
+    "neighbourhood_cleansed_Arapiles",
+    "neighbourhood_cleansed_Argüelles",
+    "neighbourhood_cleansed_Berruguete",
+    "neighbourhood_cleansed_Castillejos",
+    "neighbourhood_cleansed_Cortes",
+    "neighbourhood_cleansed_Cuatro Caminos",
+    "neighbourhood_cleansed_Embajadores",
+    "neighbourhood_cleansed_Gaztambide",
+    "neighbourhood_cleansed_Goya",
+    "neighbourhood_cleansed_Guindalera",
+    "neighbourhood_cleansed_Ibiza",
+    "neighbourhood_cleansed_Justicia",
+    "neighbourhood_cleansed_Numancia",
+    "neighbourhood_cleansed_Other",
+    "neighbourhood_cleansed_Pacífico",
+    "neighbourhood_cleansed_Palacio",
+    "neighbourhood_cleansed_Palos de Moguer",
+    "neighbourhood_cleansed_Pueblo Nuevo",
+    "neighbourhood_cleansed_Puerta del Angel",
+    "neighbourhood_cleansed_Recoletos",
+    "neighbourhood_cleansed_San Diego",
+    "neighbourhood_cleansed_Sol",
+    "neighbourhood_cleansed_Trafalgar",
+    "neighbourhood_cleansed_Universidad",
+    "neighbourhood_cleansed_Valdeacederas",
+    "neighbourhood_cleansed_Ventas",
     "room_type_Entire home/apt",
     "room_type_Private room"
 ]
 
+NUMERIC_FIELDS = [
+    "accommodates",
+    "bathrooms",
+    "bedrooms",
+    "beds",
+    "minimum_nights",
+    "number_of_reviews",
+    "review_scores_rating",
+    "availability_365"
+]
+
 VALID_NEIGHBOURHOODS = [
-    "Acacias", "Almagro", "Almenara", "Arapiles", "Argüelles",
-    "Bellas Vistas", "Berruguete", "Castillejos", "Cortes",
-    "Cuatro Caminos", "Embajadores", "Gaztambide", "Goya",
-    "Guindalera", "Ibiza", "Justicia", "Lista", "Numancia",
-    "Other", "Pacífico", "Palacio", "Palos de Moguer",
-    "Prosperidad", "Pueblo Nuevo", "Puerta del Angel",
-    "Recoletos", "Rios Rosas", "San Diego", "San Isidro",
-    "Sol", "Trafalgar", "Universidad", "Valdeacederas", "Ventas"
+    "Arapiles",
+    "Argüelles",
+    "Berruguete",
+    "Castillejos",
+    "Cortes",
+    "Cuatro Caminos",
+    "Embajadores",
+    "Gaztambide",
+    "Goya",
+    "Guindalera",
+    "Ibiza",
+    "Justicia",
+    "Numancia",
+    "Other",
+    "Pacífico",
+    "Palacio",
+    "Palos de Moguer",
+    "Pueblo Nuevo",
+    "Puerta del Angel",
+    "Recoletos",
+    "San Diego",
+    "Sol",
+    "Trafalgar",
+    "Universidad",
+    "Valdeacederas",
+    "Ventas"
 ]
 
 VALID_ROOM_TYPES = [
@@ -114,100 +141,89 @@ def health():
 # Ejemplo: /neighbourhood/Sol
 # El valor "Sol" se guarda en la variable name
 
-# @pie sintax
-# Es un decorado de una función o un objeto, se utiliza para modificar su comportamiento
-@app.route("/neighbourhood/<string:name>", methods=["GET"])
-def get_neighbourhood(name):
-    return jsonify({
-        "neighbourhood_cleansed": name,
-        "message": f"Barrio recibido correctamente: {name}"
-    })
-
-
 # RUTA CON PARÁMETROS DE LA QUERY PARA USAR LA FUNCIÓN DE PREDICCIÓN
 # Recibe los datos que necesita el modelo para hacer las predicciones
 
-def build_model_input(data_source):
-    data = {col: 0 for col in MODEL_COLUMNS}
+def build_feature_row(data):
+    missing = [field for field in NUMERIC_FIELDS + ["neighbourhood_cleansed", "room_type"] if field not in data]
+    if missing:
+        raise ValueError(f"Faltan campos requeridos: {', '.join(missing)}")
 
-    try:
-        data["minimum_nights"] = float(data_source.get("minimum_nights", 0))
-        data["number_of_reviews"] = float(data_source.get("number_of_reviews", 0))
-        data["availability_365"] = float(data_source.get("availability_365", 0))
-    except (TypeError, ValueError):
-        raise ValueError(
-            "minimum_nights, number_of_reviews y availability_365 deben ser numéricos"
-        )
+    row = {}
 
-    neighbourhood = data_source.get("neighbourhood")
-    room_type = data_source.get("room_type")
+    for field in NUMERIC_FIELDS:
+        try:
+            row[field] = float(data[field])
+        except (TypeError, ValueError):
+            raise ValueError(f"El campo '{field}' debe ser numérico")
 
-    if not neighbourhood:
-        raise ValueError("Falta el parámetro 'neighbourhood'")
-    if not room_type:
-        raise ValueError("Falta el parámetro 'room_type'")
+    neighbourhood = str(data["neighbourhood_cleansed"]).strip()
+    room_type = str(data["room_type"]).strip()
 
     if neighbourhood not in VALID_NEIGHBOURHOODS:
         raise ValueError(
-            f"Barrio no válido. Usa uno de estos: {', '.join(VALID_NEIGHBOURHOODS)}"
+            f"Barrio no válido. Usa uno de: {', '.join(VALID_NEIGHBOURHOODS)}"
         )
 
     if room_type not in VALID_ROOM_TYPES:
         raise ValueError(
-            f"room_type no válido. Usa uno de estos: {', '.join(VALID_ROOM_TYPES)}"
+            f"room_type no válido. Usa uno de: {', '.join(VALID_ROOM_TYPES)}"
         )
 
-    neighbourhood_col = f"neighbourhood_{neighbourhood}"
+    for col in FEATURE_COLUMNS:
+        if col not in row:
+            row[col] = 0
+
+    neighbourhood_col = f"neighbourhood_cleansed_{neighbourhood}"
     room_type_col = f"room_type_{room_type}"
 
-    data[neighbourhood_col] = 1
-    data[room_type_col] = 1
+    if neighbourhood_col in row:
+        row[neighbourhood_col] = 1
 
-    return data
+    if room_type_col in row:
+        row[room_type_col] = 1
 
+    return pd.DataFrame([row], columns=FEATURE_COLUMNS)
 
 
 
 
 
 # PREDICCION DE RESULTADOS
+# PREDICT QUERY
 # /predict_query?neighbourhood=Sol&room_type=Entire%20home/apt&minimum_nights=5...
-@app.route("/predict_query", methods=["GET"])
+@app.route("/predict-query", methods=["GET"])
 def predict_query():
     try:
-        input_data = build_model_input(request.args)
-        df = pd.DataFrame([input_data], columns=MODEL_COLUMNS)
-        prediction = model.predict(df)[0]
+        data = request.args.to_dict()
+        X = build_feature_row(data)
+        prediction = model.predict(X)[0]
 
         return jsonify({
-            "predicted_price": float(prediction),
-            "input": {
-                "neighbourhood": request.args.get("neighbourhood"),
-                "room_type": request.args.get("room_type"),
-                "minimum_nights": request.args.get("minimum_nights"),
-                "number_of_reviews": request.args.get("number_of_reviews"),
-                "availability_365": request.args.get("availability_365")
-            }
+            "predicted_price": round(float(prediction), 2)
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 400
     
 
 
+# PREDICT POST
+
 @app.route("/predict", methods=["POST"])
 def predict():
     try:
         data = request.get_json()
-        input_data = build_model_input(data)
-        df = pd.DataFrame([input_data], columns=MODEL_COLUMNS)
-        prediction = model.predict(df)[0]
+        if not data:
+            return jsonify({"error": "Debes enviar un JSON válido"}), 400
+
+        X = build_feature_row(data)
+        prediction = model.predict(X)[0]
 
         return jsonify({
-            "predicted_price": float(prediction),
-            "input": data
+            "predicted_price": round(float(prediction), 2)
         })
     except Exception as e:
-        return jsonify({"error": str(e)}), 400   
+        return jsonify({"error": str(e)}), 400
 
 
 
