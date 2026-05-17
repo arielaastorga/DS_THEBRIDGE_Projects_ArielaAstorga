@@ -5,6 +5,7 @@ import pickle
 # jsonify para devolver respuestas en formato JSON,
 # y request para leer datos que envía el usuario
 from flask import Flask, jsonify, request
+import pandas as pd
 
 # Creamos la aplicación Flask
 # __name__ le indica a Flask dónde está el archivo principal
@@ -15,14 +16,6 @@ app.config["DEBUG"] = False
 
 #app.config["DEBUG"] = True
 
-from fake_model import FakeApartmentPriceModel
-import pickle
-
-with open("model.pkl", "rb") as f:
-    model = pickle.load(f)
-
-
-
 
 # Cargamos el "modelo" al iniciar la aplicación
 # Esto hace que el modelo se lea una sola vez al arrancar la API
@@ -31,6 +24,20 @@ with open("model.pkl", "rb") as f:
     model = pickle.load(f)
 
 
+FEATURES = [
+    "neighbourhood_cleansed",
+    "room_type",
+    "accommodates",
+    "bathrooms",
+    "bedrooms",
+    "beds",
+    "price",
+    "minimum_nights",
+    "number_of_reviews",
+    "review_scores_rating",
+    "availability_365"
+]
+
 # Ruta principal de la API
 # Se ejecuta cuando alguien entra a la URL raíz "/"
 # En la terminal bash:   http://localhost:5000/
@@ -38,9 +45,9 @@ with open("model.pkl", "rb") as f:
 
 @app.route("/", methods=["GET"])
 def home():
-    # Devolvemos un mensaje en formato JSON
     return jsonify({
-        "message": "API Flask para predicción de precio de apartamentos"
+        "message": "API Flask para prediccion de apartamentos",
+        "endpoints": ["/health", "/predict_query", "/predict"]
     })
 
 
@@ -63,7 +70,7 @@ def health():
 @app.route("/neighbourhood/<string:name>", methods=["GET"])
 def get_neighbourhood(name):
     return jsonify({
-        "neighbourhood": name,
+        "neighbourhood_cleansed": name,
         "message": f"Barrio recibido correctamente: {name}"
     })
 
@@ -72,60 +79,67 @@ def get_neighbourhood(name):
 # Recibe los datos que necesita el modelo para hacer las predicciones
 # Variables del modelo:
 '''
-neighbourhood
-room_type
-minimum_nights
-number_of_reviews 
-availability_365  
-number_of_reviews_ltm
+'neighbourhood_cleansed', 
+'room_type', 
+'accommodates',
+'bathrooms', 
+'bedrooms', 
+'beds', 
+'price',
+'minimum_nights', 
+'number_of_reviews',
+ 'review_scores_rating', 
+ 'availability_365'
 
 variable objetivo: price 
 '''
 
-# Ejemplo:
+def build_input(data_source):
+    return {
+        "neighbourhood_cleansed": data_source.get("neighbourhood_cleansed"),
+        "room_type": data_source.get("room_type"),
+        "accommodates": float(data_source.get("accommodates")),
+        "bathrooms": float(data_source.get("bathrooms")),
+        "bedrooms": float(data_source.get("bedrooms")),
+        "beds": float(data_source.get("beds")),
+        "price": float(data_source.get("price")),
+        "minimum_nights": float(data_source.get("minimum_nights")),
+        "number_of_reviews": float(data_source.get("number_of_reviews")),
+        "review_scores_rating": float(data_source.get("review_scores_rating")),
+        "availability_365": float(data_source.get("availability_365"))
+    }
+
+
+# PREDICCION DE RESULTADOS
 # /predict_query?neighbourhood=Sol&room_type=Entire%20home/apt&minimum_nights=5...
 @app.route("/predict_query", methods=["GET"])
 def predict_query():
     try:
-        # request.args.get(...) lee parámetros que vienen en la URL
-        neighbourhood = request.args.get("neighbourhood")
-        room_type = request.args.get("room_type")
+        input_data = build_input(request.args)
+        df = pd.DataFrame([input_data], columns=FEATURES)
+        prediction = model.predict(df)[0]
 
-        # Convertimos las variables numéricas a float, porque llegan como texto desde la URL
-        minimum_nights = float(request.args.get("minimum_nights"))
-        number_of_reviews = float(request.args.get("number_of_reviews"))
-        availability_365 = float(request.args.get("availability_365"))
-        number_of_reviews_ltm = float(request.args.get("number_of_reviews_ltm"))
-
-        # Llamamos al método predict_one de nuestro modelo pasándole todas las variables necesarias
-        prediction = model.predict_one(
-            neighbourhood = neighbourhood,
-            room_type = room_type,
-            minimum_nights = minimum_nights,
-            number_of_reviews = number_of_reviews,
-            availability_365 = availability_365,
-            number_of_reviews_ltm = number_of_reviews_ltm
-        )
-
-        # Devolvemos la predicción y también los datos de entrada
         return jsonify({
-            "predicted_price": prediction,
-            "input": {
-                "neighbourhood": neighbourhood,
-                "room_type": room_type,
-                "minimum_nights": minimum_nights,
-                "number_of_reviews": number_of_reviews,
-                "availability_365": availability_365,
-                "number_of_reviews_ltm": number_of_reviews_ltm
-            }
+            "predicted_price": float(prediction),
+            "input": input_data
         })
-
     except Exception as e:
-        # Si hay cualquier error, devolvemos un JSON con el mensaje de error 
-        # y un código HTTP 400 (bad request)
+        return jsonify({"error": str(e)}), 400
+
+@app.route("/predict", methods=["POST"])
+def predict():
+    try:
+        data = request.get_json()
+        input_data = build_input(data)
+        df = pd.DataFrame([input_data], columns=FEATURES)
+        prediction = model.predict(df)[0]
+
         return jsonify({
-            "error": str(e)
-        }), 400
+            "predicted_price": float(prediction),
+            "input": input_data
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
 
 
 
@@ -189,10 +203,3 @@ def internal_error(error):
         "error": "Error interno del servidor"
     }), 500
 
-'''
-# Este bloque solo se ejecuta si lanzas el archivo con:
-# python app.py
-# Sirve para desarrollo local
-if __name__ == "__main__":
-    app.run(debug=True)
-'''
