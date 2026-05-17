@@ -1,5 +1,5 @@
-# Importamos pickle para poder cargar el archivo model.pkl
-import pickle
+# Importamos joblib para poder cargar el archivo model.pkl
+import joblib
 
 # Importamos Flask para crear la API,
 # jsonify para devolver respuestas en formato JSON,
@@ -20,8 +20,9 @@ app.config["DEBUG"] = False
 # Cargamos el "modelo" al iniciar la aplicación
 # Esto hace que el modelo se lea una sola vez al arrancar la API
 # y no en cada petición
-with open("model.pkl", "rb") as f:
-    model = pickle.load(f)
+
+
+model = joblib.load("model/model.pkl")
 
 
 FEATURES = [
