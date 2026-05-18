@@ -201,7 +201,7 @@ def predict_query():
         prediction = model.predict(X)[0]
 
         return jsonify({
-            "prediccion_precio": round(float(prediction), 2)
+            "predicted_price": round(float(prediction), 2)
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 400
@@ -221,7 +221,7 @@ def predict():
         prediction = model.predict(X)[0]
 
         return jsonify({
-            "predicccion_precio": round(float(prediction), 2)
+            "predicted_price": round(float(prediction), 2)
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 400
