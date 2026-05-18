@@ -136,6 +136,11 @@ def health():
 # Ruta con parámetro en el path, para recibir por ejemplo el nombre de un barrio
 # Ejemplo: /neighbourhood/Sol
 # El valor "Sol" se guarda en la variable name
+@app.route("/neighbourhood/<name>", methods=["GET"])
+def neighbourhood(name):
+    return jsonify({"neighbourhood": name})
+
+
 
 # RUTA CON PARÁMETROS DE LA QUERY PARA USAR LA FUNCIÓN DE PREDICCIÓN
 # Recibe los datos que necesita el modelo para hacer las predicciones
