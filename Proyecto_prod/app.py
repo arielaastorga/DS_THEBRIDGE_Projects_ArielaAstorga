@@ -22,12 +22,10 @@ app.config["DEBUG"] = False
 # y no en cada petición
 model = joblib.load("model/model.pkl")
 
-
-
 # Variables de entrada del modelo
 # Esto debo hacerlo porque el modelo fue entrenado con columnas one_hot encodder
 
-FEATURE_COLUMNS = [
+tipos_columnas = [
     "accommodates",
     "bathrooms",
     "bedrooms",
@@ -66,7 +64,7 @@ FEATURE_COLUMNS = [
     "room_type_Private room"
 ]
 
-NUMERIC_FIELDS = [
+campos_numericos = [
     "accommodates",
     "bathrooms",
     "bedrooms",
@@ -77,7 +75,7 @@ NUMERIC_FIELDS = [
     "availability_365"
 ]
 
-VALID_NEIGHBOURHOODS = [
+barrios = [
     "Arapiles",
     "Argüelles",
     "Berruguete",
@@ -106,7 +104,7 @@ VALID_NEIGHBOURHOODS = [
     "Ventas"
 ]
 
-VALID_ROOM_TYPES = [
+tipos_alquiler = [
     "Entire home/apt",
     "Private room"
 ]
@@ -142,33 +140,40 @@ def health():
 # RUTA CON PARÁMETROS DE LA QUERY PARA USAR LA FUNCIÓN DE PREDICCIÓN
 # Recibe los datos que necesita el modelo para hacer las predicciones
 
-def build_feature_row(data):
-    missing = [field for field in NUMERIC_FIELDS + ["neighbourhood_cleansed", "room_type"] if field not in data]
+def preparar_fila_entrada(data):
+
+    # Compruebo que estén los campos de neighbourhood_y room type, y sino manda un error
+
+    missing = [campo for campo in campos_numericos + ["neighbourhood_cleansed", "room_type"] if campo not in data]
+
     if missing:
         raise ValueError(f"Faltan campos requeridos: {', '.join(missing)}")
 
     row = {}
 
-    for field in NUMERIC_FIELDS:
+    # Compruebo que estos campos sean numéricos
+    for campo in campos_numericos:
         try:
-            row[field] = float(data[field])
+            row[campo] = float(data[campo])
         except (TypeError, ValueError):
-            raise ValueError(f"El campo '{field}' debe ser numérico")
+            raise ValueError(f"El campo '{campo}' debe ser numérico")
 
+    # Los convierto en string y le quito los espacios
     neighbourhood = str(data["neighbourhood_cleansed"]).strip()
+
     room_type = str(data["room_type"]).strip()
 
-    if neighbourhood not in VALID_NEIGHBOURHOODS:
+    if neighbourhood not in barrios:
         raise ValueError(
-            f"Barrio no válido. Usa uno de: {', '.join(VALID_NEIGHBOURHOODS)}"
+            f"Barrio no válido. Usa uno de: {', '.join(barrios)}"
         )
 
-    if room_type not in VALID_ROOM_TYPES:
+    if room_type not in tipos_alquiler:
         raise ValueError(
-            f"room_type no válido. Usa uno de: {', '.join(VALID_ROOM_TYPES)}"
+            f"room_type no válido. Usa uno de: {', '.join(tipos_alquiler)}"
         )
 
-    for col in FEATURE_COLUMNS:
+    for col in tipos_columnas:
         if col not in row:
             row[col] = 0
 
@@ -181,7 +186,7 @@ def build_feature_row(data):
     if room_type_col in row:
         row[room_type_col] = 1
 
-    return pd.DataFrame([row], columns=FEATURE_COLUMNS)
+    return pd.DataFrame([row], columns=tipos_columnas)
 
 
 
@@ -192,11 +197,11 @@ def build_feature_row(data):
 def predict_query():
     try:
         data = request.args.to_dict()
-        X = build_feature_row(data)
+        X = preparar_fila_entrada(data)
         prediction = model.predict(X)[0]
 
         return jsonify({
-            "predicted_price": round(float(prediction), 2)
+            "prediccion_precio": round(float(prediction), 2)
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 400
@@ -212,11 +217,11 @@ def predict():
         if not data:
             return jsonify({"error": "Debes enviar un JSON válido"}), 400
 
-        X = build_feature_row(data)
+        X = preparar_fila_entrada(data)
         prediction = model.predict(X)[0]
 
         return jsonify({
-            "predicted_price": round(float(prediction), 2)
+            "predicccion_precio": round(float(prediction), 2)
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 400
