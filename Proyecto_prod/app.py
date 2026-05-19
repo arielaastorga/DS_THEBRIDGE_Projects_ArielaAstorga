@@ -136,6 +136,7 @@ def health():
 # Ruta con parámetro en el path, para recibir por ejemplo el nombre de un barrio
 # Ejemplo: /neighbourhood/Sol
 # El valor "Sol" se guarda en la variable name
+# La función responde con neighbourhood": name
 @app.route("/neighbourhood/<name>", methods=["GET"])
 def neighbourhood(name):
     return jsonify({"neighbourhood": name})

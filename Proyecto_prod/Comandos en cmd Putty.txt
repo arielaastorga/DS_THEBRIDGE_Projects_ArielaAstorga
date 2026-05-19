@@ -1,0 +1,25 @@
+Enciendo todo:
+cd ~
+
+curl ifconfig.me
+sudo systemctl status nginx
+sudo systemctl status clase.service
+curl http://127.0.0.1:8000/health
+curl http://127.0.0.1/health
+
+
+
+Si algo no funciona, o no están activos:
+sudo systemctl start clase.service
+sudo systemctl start nginx
+sudo systemctl enable clase.service
+sudo systemctl enable nginx
+
+
+Reiniciar por si acaso:
+sudo systemctl restart clase.service
+sudo systemctl restart nginx
+
+
+Para probar la url:
+http://TU_IP_PUBLICA/health
