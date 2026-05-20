@@ -118,7 +118,7 @@ tipos_alquiler = [
 @app.route("/", methods=["GET"])
 def home():
     return jsonify({
-        "message": "API Flask para prediccion de apartamentos",
+        "message": "API Flask para prediccion de precios de apartamentos",
         "endpoints": ["/health", "/predict_query", "/predict"]
     })
 
